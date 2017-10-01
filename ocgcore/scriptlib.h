@@ -16,6 +16,20 @@ public:
 	static int32 check_param(lua_State* L, int32 param_type, int32 index, BOOL retfalse = FALSE);
 	static int32 check_param_count(lua_State* L, int32 count);
 	static int32 check_action_permission(lua_State* L);
+	//222DIY
+	static int32 card_get_affecting_effect(lua_State *L);
+	static int32 card_set_entity_code(lua_State *L);
+	static int32 card_filter_effect(lua_State *L);
+	static int32 card_set_card_data(lua_State *L);
+	static int32 effect_set_owner(lua_State *L);
+	static int32 effect_get_range(lua_State *L);
+	static int32 effect_get_count_limit(lua_State *L);
+	static int32 duel_select_field(lua_State *L);
+	static int32 duel_get_master_rule(lua_State *L);
+	static int32 duel_filter_player_effect(lua_State *L);
+	static int32 duel_read_card(lua_State *L);
+	static int32 duel_exile(lua_State *L);
+	static int32 duel_disable_action_check(lua_State *L);
 
 	//card lib
 	static int32 card_get_code(lua_State *L);
@@ -55,6 +69,7 @@ public:
 	static int32 card_is_link_state(lua_State *L);
 	static int32 card_get_column_group(lua_State *L);
 	static int32 card_get_column_group_count(lua_State *L);
+	static int32 card_get_column_zone(lua_State *L);
 	static int32 card_is_all_column(lua_State *L);
 	static int32 card_get_attribute(lua_State *L);
 	static int32 card_get_origin_attribute(lua_State *L);
@@ -146,6 +161,8 @@ public:
 	static int32 card_get_owner_target_count(lua_State *L);
 	static int32 card_get_activate_effect(lua_State *L);
 	static int32 card_check_activate_effect(lua_State *L);
+	static int32 card_get_tuner_limit(lua_State * L);
+	static int32 card_get_hand_synchro(lua_State * L);
 	static int32 card_register_effect(lua_State *L);
 	static int32 card_is_has_effect(lua_State *L);
 	static int32 card_reset_effect(lua_State *L);

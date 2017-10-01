@@ -16,6 +16,19 @@
 #include <iostream>
 #include <algorithm>
 
+//222DIY
+uint32 card::set_entity_code(uint32 entity_code, bool remove_alias) {
+	card_data dat;
+	::read_card(entity_code, &dat);
+	uint32 code = dat.code;
+	if (!code)
+		return 0;
+	if (remove_alias && dat.alias)
+		dat.alias = 0;
+	data = dat;
+	return code;
+}
+
 bool card_sort::operator()(void* const & p1, void* const & p2) const {
 	card* c1 = (card*)p1;
 	card* c2 = (card*)p2;
@@ -898,8 +911,9 @@ uint32 card::get_rank() {
 		return 0;
 	if(assume_type == ASSUME_RANK)
 		return assume_value;
-	if(!(current.location & LOCATION_MZONE))
-		return data.level;
+	//222DIY modded from ygocc
+	//if(!(current.location & LOCATION_MZONE))
+	//	return data.level;
 	if (temp.level != 0xffffffff)
 		return temp.level;
 	effect_set effects;
@@ -1109,10 +1123,19 @@ uint32 card::get_rscale() {
 	temp.rscale = 0xffffffff;
 	return rscale;
 }
+//222DIY modded by Flandre
 uint32 card::get_link_marker() {
 	if(!(data.type & TYPE_LINK))
 		return 0;
-	return data.link_marker;
+	effect_set effects;
+	uint32 link_marker = data.link_marker;
+	filter_effect(710253, &effects);
+	for (int32 i = 0; i < effects.size(); ++i){
+		card* ocard = effects[i]->get_handler();
+		if (!(effects[i]->type & EFFECT_TYPE_FIELD) || !(ocard && ocard->get_status(STATUS_TO_LEAVE_FROMEX)))
+			link_marker = effects[i]->get_value(this);
+	}
+	return link_marker;
 }
 int32 card::is_link_marker(uint32 dir) {
 	return (int32)(get_link_marker() & dir);
@@ -2185,6 +2208,8 @@ int32 card::remove_counter(uint16 countertype, uint16 count) {
 int32 card::is_can_add_counter(uint8 playerid, uint16 countertype, uint16 count, uint8 singly, uint32 loc) {
 	effect_set eset;
 	if(!pduel->game_field->is_player_can_place_counter(playerid, this, countertype, count))
+		return FALSE;
+	if(!loc && (!(current.location & LOCATION_ONFIELD) || !is_position(POS_FACEUP)))
 		return FALSE;
 	if((countertype & COUNTER_NEED_ENABLE) && is_status(STATUS_DISABLED))
 		return FALSE;

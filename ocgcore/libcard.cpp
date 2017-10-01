@@ -13,6 +13,94 @@
 #include "group.h"
 #include <iostream>
 
+//222DIY functions
+int32 scriptlib::card_get_affecting_effect(lua_State *L) {
+	check_param_count(L, 2);
+	check_param(L, PARAM_TYPE_CARD, 1);
+	card* pcard = *(card**) lua_touserdata(L, 1);
+	uint32 code = lua_tointeger(L, 2);
+	effect* peffect = pcard->is_affected_by_effect(code, pcard);
+	interpreter::effect2value(L, peffect);
+	return 1;
+}
+int32 scriptlib::card_filter_effect(lua_State *L) {
+	check_param_count(L, 2);
+	check_param(L, PARAM_TYPE_CARD, 1);
+	card* pcard = *(card**) lua_touserdata(L, 1);
+	uint32 code = lua_tointeger(L, 2);
+	int32 sort = lua_toboolean(L, 3);
+	effect_set eset;
+	if(sort || (lua_gettop(L) < 3))
+		pcard->filter_effect(code, &eset, TRUE);
+	else
+		pcard->filter_effect(code, &eset, FALSE);
+	if(eset.size() <= 0)
+		return 0;
+	int32 count = 0;
+	for(int32 i = 0; i < eset.size(); ++i) {
+		interpreter::effect2value(L, eset[i]);
+		count = count + 1;
+	}
+	return count;
+}
+int32 scriptlib::card_set_entity_code(lua_State *L) {
+	check_param_count(L, 2);
+	check_param(L, PARAM_TYPE_CARD, 1);
+	card* pcard = *(card**) lua_touserdata(L, 1);
+	uint32 trace = lua_tointeger(L, 2);
+	bool remove_alias = false;
+	int32 enable = lua_toboolean(L, 3);
+	if (enable)
+		remove_alias = true;
+	lua_pushinteger(L, pcard->set_entity_code(trace, remove_alias));
+	return 1;
+}
+int32 scriptlib::card_set_card_data(lua_State *L) {
+	check_param_count(L, 3);
+	check_param(L, PARAM_TYPE_CARD, 1);
+	card* pcard = *(card**) lua_touserdata(L, 1);
+	int32 stype = lua_tointeger(L, 2);
+	switch(stype) {
+	case ASSUME_CODE:
+		pcard->data.code = lua_tointeger(L, 3);
+		break;
+	case ASSUME_TYPE:
+		pcard->data.type = lua_tointeger(L, 3);
+		break;
+	case ASSUME_LEVEL:
+		pcard->data.level = lua_tointeger(L, 3);
+		break;
+	case ASSUME_RANK:
+		pcard->data.level = lua_tointeger(L, 3);
+		break;
+	case ASSUME_ATTRIBUTE:
+		pcard->data.attribute = lua_tointeger(L, 3);
+		break;
+	case ASSUME_RACE:
+		pcard->data.race = lua_tointeger(L, 3);
+		break;
+	case ASSUME_ATTACK:
+		pcard->data.attack = lua_tointeger(L, 3);
+		break;
+	case ASSUME_DEFENSE:
+		pcard->data.defense = lua_tointeger(L, 3);
+		break;		
+	case 9:
+		pcard->data.alias = lua_tointeger(L, 3);
+		break;
+	case 10:
+		pcard->data.lscale = lua_tointeger(L, 3);
+		break;
+	case 11:
+		pcard->data.rscale = lua_tointeger(L, 3);
+		break;
+	case 12:
+		pcard->data.link_marker = lua_tointeger(L, 3);
+		break;
+	}
+	return 0;
+}
+
 int32 scriptlib::card_get_code(lua_State *L) {
 	check_param_count(L, 1);
 	check_param(L, PARAM_TYPE_CARD, 1);
@@ -373,6 +461,20 @@ int32 scriptlib::card_get_column_group_count(lua_State *L) {
 	card::card_set cset;
 	pcard->get_column_cards(&cset, left, right);
 	lua_pushinteger(L, cset.size());
+	return 1;
+}
+int32 scriptlib::card_get_column_zone(lua_State *L) {
+	check_param_count(L, 2);
+	check_param(L, PARAM_TYPE_CARD, 1);
+	card* pcard = *(card**) lua_touserdata(L, 1);
+	int32 loc = lua_tointeger(L, 2);
+	int32 left = 0;
+	int32 right = 0;
+	if(lua_gettop(L) >= 3)
+		left = lua_tointeger(L, 3);
+	if(lua_gettop(L) >= 4)
+		right = lua_tointeger(L, 4);
+	lua_pushinteger(L, pcard->get_column_zone(loc, left, right));
 	return 1;
 }
 int32 scriptlib::card_is_all_column(lua_State *L) {
@@ -1199,6 +1301,73 @@ int32 scriptlib::card_check_activate_effect(lua_State *L) {
 				return 7;
 			}
 		}
+	}
+	return 0;
+}
+int32 scriptlib::card_get_tuner_limit(lua_State *L) {
+	check_param_count(L, 1);
+	check_param(L, PARAM_TYPE_CARD, 1);
+	card* pcard = *(card**)lua_touserdata(L, 1);
+	effect* peffect = pcard->is_affected_by_effect(EFFECT_TUNER_MATERIAL_LIMIT);
+	if(peffect) {
+		interpreter::effect2value(L, peffect);
+		if(peffect->target)
+			interpreter::function2value(L, peffect->target);
+		else
+			lua_pushnil(L);
+		if(peffect->value)
+			lua_pushinteger(L, peffect->value);
+		else
+			lua_pushnil(L);
+		uint16 min = 0;
+		uint16 max = 99;
+		if(peffect->s_range && peffect->s_range > min)
+			min = peffect->s_range;
+		if(peffect->o_range && peffect->o_range < max)
+			max = peffect->o_range;
+		lua_pushinteger(L, min);
+		lua_pushinteger(L, max);
+		return 5;
+	}
+	return 0;
+}
+int32 scriptlib::card_get_hand_synchro(lua_State *L) {
+	check_param_count(L, 1);
+	check_param(L, PARAM_TYPE_CARD, 1);
+	card* pcard = *(card**)lua_touserdata(L, 1);
+	effect* peffect = pcard->is_affected_by_effect(EFFECT_HAND_SYNCHRO);
+	if(peffect) {
+		interpreter::effect2value(L, peffect);
+		if(peffect->target)
+			interpreter::function2value(L, peffect->target);
+		else
+			lua_pushnil(L);
+		uint16 min = 0;
+		uint16 max = 99;
+		if(peffect->s_range && peffect->s_range > min)
+			min = peffect->s_range;
+		if(peffect->o_range && peffect->o_range < max)
+			max = peffect->o_range;
+		lua_pushinteger(L, min);
+		lua_pushinteger(L, max);
+		return 4;
+	}
+	peffect = pcard->is_affected_by_effect(EFFECT_TUNER_MATERIAL_LIMIT);
+	if(peffect && (peffect->value & LOCATION_HAND)) {
+		interpreter::effect2value(L, peffect);
+		if(peffect->target)
+			interpreter::function2value(L, peffect->target);
+		else
+			lua_pushnil(L);
+		uint16 min = 0;
+		uint16 max = 99;
+		if(peffect->s_range && peffect->s_range > min)
+			min = peffect->s_range;
+		if(peffect->o_range && peffect->o_range < max)
+			max = peffect->o_range;
+		lua_pushinteger(L, min);
+		lua_pushinteger(L, max);
+		return 4;
 	}
 	return 0;
 }

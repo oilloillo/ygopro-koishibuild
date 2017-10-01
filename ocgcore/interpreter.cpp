@@ -16,6 +16,12 @@
 #include "interpreter.h"
 
 static const struct luaL_Reg cardlib[] = {
+	//222DIY
+	{ "GetAffectingEffect", scriptlib::card_get_affecting_effect },
+	{ "FilterEffect", scriptlib::card_filter_effect },
+	{ "SetEntityCode", scriptlib::card_set_entity_code },
+	{ "SetCardData", scriptlib::card_set_card_data },
+	
 	{ "GetCode", scriptlib::card_get_code },
 	{ "GetOriginalCode", scriptlib::card_get_origin_code },
 	{ "GetOriginalCodeRule", scriptlib::card_get_origin_code_rule },
@@ -53,6 +59,7 @@ static const struct luaL_Reg cardlib[] = {
 	{ "IsLinkState", scriptlib::card_is_link_state },
 	{ "GetColumnGroup", scriptlib::card_get_column_group },
 	{ "GetColumnGroupCount", scriptlib::card_get_column_group_count },
+	{ "GetColumnZone", scriptlib::card_get_column_zone },
 	{ "IsAllColumn", scriptlib::card_is_all_column },
 	{ "GetAttribute", scriptlib::card_get_attribute },
 	{ "GetOriginalAttribute", scriptlib::card_get_origin_attribute },
@@ -144,6 +151,8 @@ static const struct luaL_Reg cardlib[] = {
 	{ "GetOwnerTargetCount", scriptlib::card_get_owner_target_count },
 	{ "GetActivateEffect", scriptlib::card_get_activate_effect },
 	{ "CheckActivateEffect", scriptlib::card_check_activate_effect },
+	{ "GetTunerLimit", scriptlib::card_get_tuner_limit },
+	{ "GetHandSynchro", scriptlib::card_get_hand_synchro },
 	{ "RegisterEffect", scriptlib::card_register_effect },
 	{ "IsHasEffect", scriptlib::card_is_has_effect },
 	{ "ResetEffect", scriptlib::card_reset_effect },
@@ -255,6 +264,11 @@ static const struct luaL_Reg cardlib[] = {
 };
 
 static const struct luaL_Reg effectlib[] = {
+	//222DIY
+	{ "SetOwner", scriptlib::effect_set_owner },
+	{ "GetRange", scriptlib::effect_get_range },
+	{ "GetCountLimit", scriptlib::effect_get_count_limit },
+	
 	{ "CreateEffect", scriptlib::effect_new },
 	{ "GlobalEffect", scriptlib::effect_newex },
 	{ "Clone", scriptlib::effect_clone },
@@ -343,6 +357,14 @@ static const struct luaL_Reg grouplib[] = {
 };
 
 static const struct luaL_Reg duellib[] = {
+	//222DIY
+	{ "SelectField", scriptlib::duel_select_field },
+	{ "GetMasterRule", scriptlib::duel_get_master_rule },
+	{ "FilterPlayerEffect", scriptlib::duel_filter_player_effect },
+	{ "ReadCard", scriptlib::duel_read_card },
+	{ "Exile", scriptlib::duel_exile },
+	{ "DisableActionCheck", scriptlib::duel_disable_action_check },
+
 	{ "EnableGlobalFlag", scriptlib::duel_enable_global_flag },
 	{ "GetLP", scriptlib::duel_get_lp },
 	{ "SetLP", scriptlib::duel_set_lp },
@@ -566,6 +588,9 @@ interpreter::interpreter(duel* pd): coroutines(256) {
 	pduel = pd;
 	no_action = 0;
 	call_depth = 0;
+	//222DIY
+	disable_action_check = 0;
+
 	set_duel_info(lua_state, pd);
 	//Initial
 	luaL_openlibs(lua_state);
@@ -600,6 +625,15 @@ interpreter::interpreter(duel* pd): coroutines(256) {
 	//extra scripts
 	load_script((char*) "./script/constant.lua");
 	load_script((char*) "./script/utility.lua");
+	load_script((char*) "./expansions/script/nef/afi.lua");
+	load_script((char*) "./expansions/script/nef/cardList.lua");
+	load_script((char*) "./expansions/script/nef/nef.lua");
+	load_script((char*) "./expansions/script/nef/elf.lua");
+	load_script((char*) "./expansions/script/nef/ets.lua");
+	load_script((char*) "./expansions/script/nef/fus.lua");
+	load_script((char*) "./expansions/script/nef/msc.lua");
+	load_script((char*) "./expansions/script/nef/uds.lua");
+	
 }
 interpreter::~interpreter() {
 	lua_close(lua_state);
@@ -887,7 +921,12 @@ int32 interpreter::call_code_function(uint32 code, char* f, uint32 param_count, 
 		params.clear();
 		return OPERATION_FAIL;
 	}
-	load_card_script(code);
+	//modded
+	if (code > 0) {
+		load_card_script(code);
+	} else {
+		lua_getglobal(current_state, "Auxiliary");
+	}
 	lua_getfield(current_state, -1, f);
 	if (!lua_isfunction(current_state, -1)) {
 		sprintf(pduel->strbuffer, "\"CallCodeFunction\": attempt to call an error function");
